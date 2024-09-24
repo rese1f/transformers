@@ -172,6 +172,10 @@ _import_structure = {
         "ASTConfig",
         "ASTFeatureExtractor",
     ],
+    "models.aurora": [
+        "AuroraConfig", 
+        "AuroraProcessor"
+    ],
     "models.auto": [
         "CONFIG_MAPPING",
         "FEATURE_EXTRACTOR_MAPPING",
@@ -1153,6 +1157,7 @@ else:
     _import_structure["image_processing_base"] = ["ImageProcessingMixin"]
     _import_structure["image_processing_utils"] = ["BaseImageProcessor"]
     _import_structure["image_utils"] = ["ImageFeatureExtractionMixin"]
+    _import_structure["models.aurora"].extend(["AuroraImageProcessor", "AuroraVideoProcessor"])
     _import_structure["models.beit"].extend(["BeitFeatureExtractor", "BeitImageProcessor"])
     _import_structure["models.bit"].extend(["BitImageProcessor"])
     _import_structure["models.blip"].extend(["BlipImageProcessor"])
@@ -1377,6 +1382,12 @@ else:
             "ASTForAudioClassification",
             "ASTModel",
             "ASTPreTrainedModel",
+        ]
+    )
+    _import_structure["models.aurora"].extend(
+        [
+            "AuroraForConditionalGeneration",
+            "AuroraPreTrainedModel",
         ]
     )
     _import_structure["models.auto"].extend(
@@ -4926,6 +4937,10 @@ if TYPE_CHECKING:
         ASTConfig,
         ASTFeatureExtractor,
     )
+    from .models.aurora import (
+        AuroraConfig,
+        AuroraProcessor,
+    )
     from .models.auto import (
         CONFIG_MAPPING,
         FEATURE_EXTRACTOR_MAPPING,
@@ -5964,6 +5979,7 @@ if TYPE_CHECKING:
         from .image_processing_base import ImageProcessingMixin
         from .image_processing_utils import BaseImageProcessor
         from .image_utils import ImageFeatureExtractionMixin
+        from .models.aurora import AuroraImageProcessor, AuroraVideoProcessor
         from .models.beit import BeitFeatureExtractor, BeitImageProcessor
         from .models.bit import BitImageProcessor
         from .models.blip import BlipImageProcessor
@@ -6189,6 +6205,10 @@ if TYPE_CHECKING:
             ASTForAudioClassification,
             ASTModel,
             ASTPreTrainedModel,
+        )
+        from .models.aurora import (
+            AuroraForConditionalGeneration,
+            AuroraPreTrainedModel,
         )
         from .models.auto import (
             MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING,
