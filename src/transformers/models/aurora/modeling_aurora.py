@@ -127,10 +127,11 @@ class AuroraPreTrainedModel(PreTrainedModel):
     config_class = AuroraConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
+    _no_split_modules = ["AuroraVisionAttention"]
     _skip_keys_device_placement = "past_key_values"
     _supports_flash_attn_2 = True
     _supports_cache_class = True
-    _supports_static_cache = False  # Qwen2 doesn't but llava has no reasons to not support
+    _supports_static_cache = True
     _supports_quantized_cache = True
     _supports_sdpa = True
 
@@ -249,7 +250,7 @@ AURORA_INPUTS_DOCSTRING = r"""
 class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
     def __init__(self, config: AuroraConfig):
         super().__init__(config)
-        self.vision_tower = AuroraVisionModel.from_pretrained(config.vision_tower)
+        self.vision_tower = AuroraVisionModel(config.vision_config)
 
         self.multi_modal_projector = AuroraMultiModalProjector(config)
         embed_std = 1 / math.sqrt(config.text_config.hidden_size)
@@ -335,8 +336,8 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         >>> import torch
         >>> from transformers import AuroraProcessor, AuroraForConditionalGeneration
 
-        >>> model = AuroraForConditionalGeneration.from_pretrained("Reself/AuroraCap-7B-VID", torch_dtype="float16", device_map="cuda:0")
-        >>> processor = AuroraProcessor.from_pretrained("Reself/AuroraCap-7B-VID")
+        >>> model = AuroraForConditionalGeneration.from_pretrained("wchai/AuroraCap-7B-VID", torch_dtype="float16", device_map="cuda:0")
+        >>> processor = AuroraProcessor.from_pretrained("wchai/AuroraCap-7B-VID")
 
         >>> conversation = [
         ...     {

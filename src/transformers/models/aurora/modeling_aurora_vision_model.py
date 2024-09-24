@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
+from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from .configuration_aurora import AuroraConfig
 from ..clip import CLIPVisionModel, CLIPVisionConfig, CLIPConfig
 from ..clip.modeling_clip import CLIPVisionTransformer, CLIPMLP
@@ -233,7 +233,7 @@ def merge_source(merge: Callable, x: torch.Tensor, source: torch.Tensor = None) 
     return source
 
 class AuroraVisionModel(CLIPVisionModel):
-    def __init__(self, config: CLIPVisionConfig, visual_token_kept_ratio=1):
+    def __init__(self, config: CLIPVisionConfig, visual_token_kept_ratio=1.0):
         super().__init__(config)
         self.vision_model = AuroraCLIPVisionTransformer(config, visual_token_kept_ratio)
         self.visual_token_kept_ratio = visual_token_kept_ratio

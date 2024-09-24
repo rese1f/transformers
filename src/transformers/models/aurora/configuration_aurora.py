@@ -117,6 +117,7 @@ class AuroraConfig(PretrainedConfig):
                 num_attention_heads=16,
                 projection_dim=512,
             )
+        self.vision_config = vision_config
 
         if isinstance(text_config, dict):
             text_config["model_type"] = text_config["model_type"] if "model_type" in text_config else "llama"
