@@ -135,29 +135,6 @@ class AuroraPreTrainedModel(PreTrainedModel):
     _supports_quantized_cache = True
     _supports_sdpa = True
 
-    # Copied from transformers.models.llava_next.modeling_llava_next.LlavaNextPreTrainedModel._init_weights
-    def _init_weights(self, module):
-        # important: this ported version of LlavaNext isn't meant for training from scratch - only
-        # inference and fine-tuning - so the proper init weights code has been removed - the original codebase
-        # https://github.com/haotian-liu/LLaVA/tree/main/llava_next should serve for that purpose
-        std = (
-            self.config.initializer_range
-            if hasattr(self.config, "initializer_range")
-            else self.config.text_config.initializer_range
-        )
-
-        if hasattr(module, "class_embedding"):
-            module.class_embedding.data.normal_(mean=0.0, std=std)
-
-        if isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
 
 AURORA_INPUTS_DOCSTRING = r"""
     Args:
@@ -253,9 +230,6 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         self.vision_tower = AuroraVisionModel(config.vision_config)
 
         self.multi_modal_projector = AuroraMultiModalProjector(config)
-        embed_std = 1 / math.sqrt(config.text_config.hidden_size)
-        self.image_newline = nn.Parameter(torch.randn(config.text_config.hidden_size, dtype=self.dtype) * embed_std)
-
         self.vocab_size = config.text_config.vocab_size
         self.language_model = AutoModelForCausalLM.from_config(
             config.text_config, attn_implementation=config._attn_implementation
