@@ -278,6 +278,7 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         inputs_embeds: Optional[torch.FloatTensor] = None,
         vision_feature_layer: Optional[int] = None,
         vision_feature_select_strategy: Optional[str] = None,
+        token_kept_ratio: Optional[float] = 1.,
         labels: Optional[torch.LongTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
@@ -358,43 +359,20 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         if inputs_embeds is None:
             inputs_embeds = self.get_input_embeddings()(input_ids)
 
-        # Images are processed with Anyres
+        # set token_kept_ratio
+        self.vision_tower.update_visual_token_merge_ratio(token_kept_ratio)
+        
+        # Image inputs
         if pixel_values is not None:
-            image_num_patches = [
-                image_size_to_num_patches(
-                    image_size=imsize,
-                    grid_pinpoints=self.config.image_grid_pinpoints,
-                    patch_size=self.config.vision_config.image_size,
-                )
-                for imsize in image_sizes
-            ]
-
-            # unpad extra patches and concatenate them
-            if pixel_values.dim() == 5:
-                _pixel_values_list = [
-                    pix_val[:num_patch] for pix_val, num_patch in zip(pixel_values, image_num_patches)
-                ]
-                # [batch_size*frames*num_patches, num_channels, height, width] where frames=1 for images
-                pixel_values = torch.cat(_pixel_values_list, dim=0)
-            elif pixel_values.dim() != 4:
-                raise ValueError(f"pixel_values of shape {pixel_values.shape}, expect to be of 4 or 5 dimensions")
-
             image_features = self.vision_tower(pixel_values, output_hidden_states=True)
             selected_image_feature = image_features.hidden_states[vision_feature_layer]
 
             if vision_feature_select_strategy == "default":
                 selected_image_feature = selected_image_feature[:, 1:]
+            # we suggest only using "full" strategy after token merging
             elif vision_feature_select_strategy == "full":
                 selected_image_feature = selected_image_feature
             image_features = self.multi_modal_projector(selected_image_feature)
-
-            image_features = torch.split(image_features, image_num_patches, dim=0)
-            image_features, feature_lens = self.pack_image_features(
-                image_features,
-                image_sizes,
-                image_newline=self.image_newline,
-                vision_aspect_ratio=vision_aspect_ratio,
-            )
 
             special_image_mask = (
                 (input_ids == self.config.image_token_index)
