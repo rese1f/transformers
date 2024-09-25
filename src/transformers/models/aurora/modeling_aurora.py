@@ -383,12 +383,13 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
             image_features = image_features.to(inputs_embeds.device, inputs_embeds.dtype)
             inputs_embeds = inputs_embeds.masked_scatter(special_image_mask, image_features)
 
-        # Video are simply embedded and further pooled to decrease seq len
+        # Video are simply embedded as the seq of frames
         if pixel_values_videos is not None:
             batch_size, frames, channels, height, width = pixel_values_videos.shape
             pixel_values_videos = pixel_values_videos.view(batch_size * frames, channels, height, width)
             video_features = self.vision_tower(pixel_values_videos, output_hidden_states=True)
             selected_video_feature = video_features.hidden_states[vision_feature_layer]
+            selected_video_feature = selected_video_feature.view(batch_size, -1, selected_video_feature.size(-1))
 
             if vision_feature_select_strategy == "default":
                 selected_video_feature = selected_video_feature[:, 1:]
@@ -396,14 +397,8 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
                 selected_video_feature = selected_video_feature
             video_features = self.multi_modal_projector(selected_video_feature)
 
-            video_features = self.apply_pooling(video_features)
-            video_features = video_features.reshape(batch_size, frames * video_features.shape[1], -1)
-            image_newline = self.image_newline[None, None, :].repeat(batch_size, 1, 1).to(video_features.device)
-            video_features = torch.cat((video_features, image_newline), dim=1)
-            video_features = video_features.flatten(0, 1)
-
             special_video_mask = (
-                (input_ids == self.config.video_token_index)
+                (input_ids == self.config.image_token_index) # use one image token for each frame
                 .unsqueeze(-1)
                 .expand_as(inputs_embeds)
                 .to(inputs_embeds.device)

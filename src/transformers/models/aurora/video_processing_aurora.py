@@ -62,9 +62,9 @@ def make_batched_videos(videos) -> List[VideoInput]:
     raise ValueError(f"Could not make batched video from {videos}")
 
 
-class LlavaOnevisionVideoProcessor(BaseImageProcessor):
+class AuroraVideoProcessor(BaseImageProcessor):
     r"""
-    Constructs a LLaVa-Onevisino-Video video processor. Based on [`SiglipImageProcessor`] with incorporation of processing each video frame.
+    Constructs a Aurora video processor. Based on [`SiglipImageProcessor`] with incorporation of processing each video frame.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):

@@ -32,7 +32,7 @@ from ..auto import AutoImageProcessor
 logger = logging.get_logger(__name__)
 
 
-class LlavaOnevisionProcessorKwargs(ProcessingKwargs, total=False):
+class AuroraProcessorKwargs(ProcessingKwargs, total=False):
     # see processing_utils.ProcessingKwargs documentation for usage.
     _defaults = {
         "text_kwargs": {
@@ -43,19 +43,19 @@ class LlavaOnevisionProcessorKwargs(ProcessingKwargs, total=False):
     }
 
 
-class LlavaOnevisionProcessor(ProcessorMixin):
+class AuroraProcessor(ProcessorMixin):
     r"""
-    Constructs a LLaVa-Onevision processor which wraps a LLaVa-Onevision video processor, LLaVa-NeXT image processor and a LLaMa tokenizer into a single processor.
+    Constructs a Aurora processor which wraps a Aurora video processor, Aurora image processor and a LLaMa tokenizer into a single processor.
 
-    [`LlavaNextProcessor`] offers all the functionalities of [`LlavaOnevisionVideoProcessor`], [`LlavaOnevisionImageProcessor`] and [`LlamaTokenizerFast`]. See the
-    [`~LlavaOnevisionVideoProcessor.__call__`], [`~LlavaNextProcessor.__call__`] and [`~LlavaNextProcessor.decode`] for more information.
+    [`AuroraProcessor`] offers all the functionalities of [`AuroraVideoProcessor`], [`AuroraImageProcessor`] and [`LlamaTokenizerFast`]. See the
+    [`~AuroraVideoProcessor.__call__`], [`~AuroraProcessor.__call__`] and [`~AuroraProcessor.decode`] for more information.
 
     Args:
-        image_processor ([`LlavaOnevisionImageProcessor`], *optional*):
+        image_processor ([`AuroraImageProcessor`], *optional*):
             The image processor is a required input.
         tokenizer ([`LlamaTokenizerFast`], *optional*):
             The tokenizer is a required input.
-        video_processor ([`LlavaOnevisionVideoProcessor`], *optional*):
+        video_processor ([`AuroraVideoProcessor`], *optional*):
             The video processor is a required input.
         num_image_tokens (`int`, *optional*):
             Number of image tokens for one imagethat will be returned by vision tower.
@@ -65,9 +65,7 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         chat_template (`str`, *optional*): A Jinja template which will be used to convert lists of messages
             in a chat into a tokenizable string.
         image_token (`str`, *optional*, defaults to `"<image>"`):
-            Special token used to denote image location.
-        video_token (`str`, *optional*, defaults to `"<video>"`):
-            Special token used to denote video location.
+            Special token used to denote image location. Using multiple image tokens for video input.
     """
 
     attributes = ["image_processor", "tokenizer", "video_processor"]
@@ -76,11 +74,10 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         "num_image_tokens",
         "vision_feature_select_strategy",
         "image_token",
-        "video_token",
     ]
     image_processor_class = "AutoImageProcessor"
     tokenizer_class = "AutoTokenizer"
-    video_processor_class = "LlavaOnevisionVideoProcessor"
+    video_processor_class = "AuroraVideoProcessor"
 
     def __init__(
         self,
@@ -91,28 +88,26 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         vision_feature_select_strategy=None,
         chat_template=None,
         image_token="<image>",
-        video_token="<video>",
         **kwargs,
     ):
         self.num_image_tokens = num_image_tokens
         self.vision_feature_select_strategy = vision_feature_select_strategy
         self.image_token = image_token
-        self.video_token = video_token
         super().__init__(image_processor, tokenizer, video_processor, chat_template=chat_template)
 
     def __call__(
         self,
         images: ImageInput = None,
         text: Union[TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]] = None,
-        audio=None,
+        audio = None,
         videos: VideoInput = None,
-        **kwargs: Unpack[LlavaOnevisionProcessorKwargs],
+        **kwargs: Unpack[AuroraProcessorKwargs],
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several sequences(s) and image(s). This method forwards the `text`
         and `kwargs` arguments to LlamaTokenizerFast's [`~LlamaTokenizerFast.__call__`] if `text` is not `None` to encode
         the text. To prepare the image(s), this method forwards the `images` and `kwrags` arguments to
-        LlavaNextImageProcessor's [`~LlavaNextImageProcessor.__call__`] if `images` is not `None`. Please refer to the doctsring
+        AuroraImageProcessor's [`~AuroraImageProcessor.__call__`] if `images` is not `None`. Please refer to the doctsring
         of the above two methods for more information.
 
         Args:
@@ -139,7 +134,7 @@ class LlavaOnevisionProcessor(ProcessorMixin):
         """
 
         output_kwargs = self._merge_kwargs(
-            LlavaOnevisionProcessorKwargs,
+            AuroraProcessorKwargs,
             tokenizer_init_kwargs=self.tokenizer.init_kwargs,
             **kwargs,
         )
@@ -153,99 +148,15 @@ class LlavaOnevisionProcessor(ProcessorMixin):
 
         if images is not None:
             image_inputs = self.image_processor(images, **output_kwargs["images_kwargs"])
-
-            image_sizes = iter(image_inputs["image_sizes"])
-            height, width = get_image_size(
-                to_numpy_array(image_inputs["pixel_values"][0][0]),
-                channel_dim=output_kwargs["images_kwargs"].get("data_format"),
-            )
-            text = self._expand_image_tokens(text, image_sizes, height, width, self.image_token)
-
         if videos is not None:
             video_inputs = self.video_processor(videos, **output_kwargs["videos_kwargs"])
-
-            one_video = to_numpy_array(video_inputs["pixel_values_videos"][0])
-            height, width = get_image_size(one_video[0], channel_dim=output_kwargs["images_kwargs"].get("data_format"))
-            num_frames = one_video.shape[0]  # frame dim is always after batch dim
-            patches_height_width = int(math.sqrt(self.num_image_tokens))
-            pooled_height_width = math.ceil(patches_height_width / 2)
-            num_video_tokens = (num_frames * pooled_height_width * pooled_height_width) + 1  # +1 for newline token
-            text = [sample.replace(self.video_token, self.video_token * num_video_tokens) for sample in text]
+            num_frames = to_numpy_array(video_inputs["pixel_values_videos"][0]).shape[0]
+            text = [sample.replace(self.image_token, self.image_token * num_frames) for sample in text]
 
         # Padding side can be in TextKwargs but is not accepted by the tokenizer
         _ = output_kwargs["text_kwargs"].pop("padding_side", None)
         text_inputs = self.tokenizer(text, **output_kwargs["text_kwargs"])
         return BatchFeature(data={**text_inputs, **image_inputs, **video_inputs})
-
-    def _expand_image_tokens(
-        self,
-        text: List[TextInput],
-        image_sizes: Iterable[Union[List[int], int]],
-        height: int,
-        width: int,
-        special_token: str,
-        num_frames: int = 1,
-    ):
-        prompt_strings = []
-        for sample in text:
-            while special_token in sample:
-                image_size_list = next(image_sizes)
-                orig_height, orig_width = image_size_list[0] if num_frames != 1 else image_size_list
-                num_image_tokens = self._get_number_of_features(orig_height, orig_width, height, width)
-                if self.vision_feature_select_strategy == "default":
-                    num_image_tokens -= 1
-                sample = sample.replace(special_token, "<placeholder>" * num_image_tokens * num_frames, 1)
-            prompt_strings.append(sample)
-        text = [sample.replace("<placeholder>", special_token) for sample in prompt_strings]
-        return text
-
-    def _get_number_of_features(self, orig_height: int, orig_width: int, height: int, width: int) -> int:
-        image_grid_pinpoints = self.image_processor.image_grid_pinpoints
-
-        height_best_resolution, width_best_resolution = select_best_resolution(
-            [orig_height, orig_width], image_grid_pinpoints
-        )
-        scale_height, scale_width = height_best_resolution // height, width_best_resolution // width
-
-        patches_height = patches_width = int(math.sqrt(self.num_image_tokens))
-        unpadded_features, newline_features = self._get_unpadded_features(
-            orig_height, orig_width, patches_height, patches_width, scale_height, scale_width
-        )
-
-        # The base patch covers the entire image (no CLS for SigLIP)
-        base_features = self.num_image_tokens
-        num_image_tokens = unpadded_features + newline_features + base_features
-        return num_image_tokens
-
-    def _get_unpadded_features(self, height, width, patches_height, patches_width, scale_height, scale_width):
-        """
-        Get number of features for a given image with height/width. LLaVA-NeXT is different from LLaVA
-        because it divided each image into patches depending on its resolution. Therefore we need to calculate how many
-        patches an image is divided into and get the number of features from that.
-        """
-        current_height = patches_height * scale_height
-        current_width = patches_width * scale_width
-
-        original_aspect_ratio = width / height
-        current_aspect_ratio = current_width / current_height
-        if original_aspect_ratio > current_aspect_ratio:
-            new_height = int(height * (current_width / width))
-            padding = (current_height - new_height) // 2
-            current_height -= padding * 2
-        else:
-            new_width = int(width * (current_height / height))
-            padding = (current_width - new_width) // 2
-            current_width -= padding * 2
-
-        unpadded_features = current_height * current_width
-        newline_features = current_height
-
-        ratio = math.sqrt(current_height * current_width / (9 * patches_height**2))
-        if ratio > 1.1:
-            unpadded_features = int(current_height // ratio) * int(current_width // ratio)
-            newline_features = int(current_height // ratio)
-
-        return (unpadded_features, newline_features)
 
     # Copied from transformers.models.clip.processing_clip.CLIPProcessor.batch_decode with CLIP->Llama
     def batch_decode(self, *args, **kwargs):

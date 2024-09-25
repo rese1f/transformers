@@ -141,9 +141,9 @@ def _get_patch_output_size(image, target_resolution, input_data_format):
     return new_height, new_width
 
 
-class LlavaOnevisionImageProcessor(BaseImageProcessor):
+class AuroraImageProcessor(BaseImageProcessor):
     r"""
-    Constructs a LLaVa-Onevisino-Video video processor. Based on [`SiglipImageProcessor`] with incorporation of processing each video frame.
+    Constructs a Aurora image processing pipeline.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):
