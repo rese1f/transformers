@@ -329,7 +329,7 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         >>> raw_image = Image.open(requests.get(image_file, stream=True).raw)
         >>> inputs = processor(text=prompt, images=raw_image, return_tensors='pt').to(0, torch.float16)
 
-        >>> output = model.generate(**inputs, max_new_tokens=20, do_sample=False)
+        >>> output = model.generate(**inputs, max_new_tokens=20, token_kept_ratio=0.2, do_sample=False)
         >>> processor.batch_decode(output, skip_special_tokens=True)[0]
         "user\n\nDescribe the image in detail.\nassistant\ncat"
         ```"""
@@ -460,6 +460,7 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
         image_sizes=None,
         pixel_values_videos=None,
         image_sizes_videos=None,
+        token_kept_ratio=None,
         attention_mask=None,
         cache_position=None,
         num_logits_to_keep=None,
@@ -482,5 +483,6 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
             model_inputs["image_sizes"] = image_sizes
             model_inputs["pixel_values_videos"] = pixel_values_videos
             model_inputs["image_sizes_videos"] = image_sizes_videos
+            model_inputs["token_kept_ratio"] = token_kept_ratio
 
         return model_inputs
