@@ -26,8 +26,10 @@ The abstract from the paper is the following:
 
 *Video detailed captioning is a key task which aims to generate comprehensive and coherent textual descriptions of video content, benefiting both video understanding and generation. In this paper, we propose AuroraCap, a video captioner based on a multimodal large language model. We follow the simplest architecture design without additional parameters for temporal modeling. To address the overhead caused by lengthy video sequences, we implement the token merging strategy, reducing the number of input visual tokens. Surprisingly, we found that this strategy results in little performance drop. AuroraCap shows superior performance on various video and image captioning benchmarks, for example getting a CIDEr of 88.9 on Flickr30k, beating GPT-4V (55.3) and Gemini-1.5 Pro (82.2). However, existing video caption benchmarks only include simple descriptions, consisting of a few dozen words, which limits research in this field. Therefore, we develop VDC, a video detailed captioning benchmark with over one thousand carefully annotated structured captions. In addition, we propose a new LLM-assisted metric VDCscore for bettering evaluation, which adopts a divide-and-conquer strategy to transform the evaluation of long captions into multiple short question-answering pairs. With the help of human Elo ranking, our experiments show that this benchmark better correlates with human judgments of video detailed captioning quality.*
 
-This model was contributed by [jongjyh](https://huggingface.co/wchai).
+This model was contributed by [Wenhao Chai](https://huggingface.co/wchai).
+The website of the project can be found [here](https://rese1f.github.io/aurora-web/).
 The original code can be found [here](https://github.com/Reself/aurora).
+The collection of all the model weights and datasets can be found [here](https://huggingface.co/collections/wchai/auroracap-66d117ffe13bedda96702013).
 
 <Tip>
 
