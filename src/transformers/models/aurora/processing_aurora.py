@@ -151,7 +151,6 @@ class AuroraProcessor(ProcessorMixin):
         if videos is not None:
             video_inputs = self.video_processor(videos, **output_kwargs["videos_kwargs"])
             num_frames = to_numpy_array(video_inputs["pixel_values_videos"][0]).shape[0]
-            text = [sample.replace(self.image_token, self.image_token * num_frames) for sample in text]
 
         # Padding side can be in TextKwargs but is not accepted by the tokenizer
         _ = output_kwargs["text_kwargs"].pop("padding_side", None)

@@ -373,16 +373,18 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
             elif vision_feature_select_strategy == "full":
                 selected_image_feature = selected_image_feature
             image_features = self.multi_modal_projector(selected_image_feature)
-
-            special_image_mask = (
-                (input_ids == self.config.image_token_index)
-                .unsqueeze(-1)
-                .expand_as(inputs_embeds)
-                .to(inputs_embeds.device)
-            )
             image_features = image_features.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(special_image_mask, image_features)
-
+            
+            # for loop to support batch inference
+            new_inputs_embeds = []
+            for idx in range(input_ids.shape[0]):
+                image_token_index_index = (input_ids[idx] == self.config.image_token_index).nonzero().item()
+                new_inputs_embeds.append(torch.concat([inputs_embeds[idx, :image_token_index_index], image_features[idx], inputs_embeds[idx, image_token_index_index+1:]], dim=0))
+            inputs_embeds = torch.stack(new_inputs_embeds, dim=0)
+            # extend attention_mask and position_ids
+            attention_mask = torch.ones(inputs_embeds.shape[0], inputs_embeds.shape[1], dtype=attention_mask.dtype, device=attention_mask.device)
+            position_ids = torch.arange(inputs_embeds.shape[1], dtype=torch.long, device=inputs_embeds.device).unsqueeze(0)
+        
         # Video are simply embedded as the seq of frames
         if pixel_values_videos is not None:
             batch_size, frames, channels, height, width = pixel_values_videos.shape
@@ -396,15 +398,17 @@ class AuroraForConditionalGeneration(AuroraPreTrainedModel, GenerationMixin):
             elif vision_feature_select_strategy == "full":
                 selected_video_feature = selected_video_feature
             video_features = self.multi_modal_projector(selected_video_feature)
-
-            special_video_mask = (
-                (input_ids == self.config.image_token_index) # use one image token for each frame
-                .unsqueeze(-1)
-                .expand_as(inputs_embeds)
-                .to(inputs_embeds.device)
-            )
             video_features = video_features.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(special_video_mask, video_features)
+            
+            # for loop to support batch inference
+            new_inputs_embeds = []
+            for idx in range(input_ids.shape[0]):
+                image_token_index_index = (input_ids[idx] == self.config.image_token_index).nonzero().item()
+                new_inputs_embeds.append(torch.concat([inputs_embeds[idx, :image_token_index_index], video_features[idx], inputs_embeds[idx, image_token_index_index+1:]], dim=0))
+            inputs_embeds = torch.stack(new_inputs_embeds, dim=0)
+            # extend attention_mask and position_ids
+            attention_mask = torch.ones(inputs_embeds.shape[0], inputs_embeds.shape[1], dtype=attention_mask.dtype, device=attention_mask.device)
+            position_ids = torch.arange(inputs_embeds.shape[1], dtype=torch.long, device=inputs_embeds.device).unsqueeze(0)
 
         outputs = self.language_model(
             attention_mask=attention_mask,
